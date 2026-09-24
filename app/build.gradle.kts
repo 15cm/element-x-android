@@ -38,6 +38,8 @@ plugins {
     // alias(libs.plugins.gms.google.services)
 }
 
+val useSecondInstance = providers.gradleProperty("elementSecondInstance").orNull?.toBoolean() == true
+
 android {
     namespace = "io.element.android.x"
 
@@ -116,11 +118,14 @@ android {
         }
 
         getByName("release") {
-            resValue("string", "app_name", baseAppName)
+            if (useSecondInstance) {
+                applicationIdSuffix = ".second"
+            }
+            resValue("string", "app_name", if (useSecondInstance) "$baseAppName Second" else baseAppName)
             resValue(
                 "string",
                 "login_redirect_scheme",
-                oAuthRedirectSchemeBase,
+                if (useSecondInstance) "$oAuthRedirectSchemeBase.second" else oAuthRedirectSchemeBase,
             )
             signingConfig = signingConfigs.getByName("debug")
 
@@ -201,6 +206,12 @@ android {
         jniLibs {
             useLegacyPackaging = project.findProperty("useLegacyPackaging")?.toString()?.toBoolean()
         }
+    }
+}
+
+tasks.configureEach {
+    if (name.endsWith("ReleaseResValues")) {
+        inputs.property("elementSecondInstance", useSecondInstance)
     }
 }
 
