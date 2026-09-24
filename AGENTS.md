@@ -68,6 +68,12 @@ Common Gradle tasks:
 - Format: `./gradlew ktlintFormat`
 - Update Docs TOC: `./gradlew generateDocsToc`
 
+### Local APK Signing Key
+
+- The locally generated APK signing key is stored outside the repository at `/home/sinkerine/.local/share/element-x-local-signing-0550e5GE/`.
+- `element-x-local.jks` is the private keystore; `password` stores its password. Both files have owner-only permissions, and the directory is owner-only.
+- Keep these files local and never stage, commit, or upload them. Back them up securely if future APKs must update installs signed with this key.
+
 ### Gradle Modules
 
 Features follow a 3-module structure:
