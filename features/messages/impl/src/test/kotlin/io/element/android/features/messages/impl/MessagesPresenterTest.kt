@@ -1447,31 +1447,23 @@ class MessagesPresenterTest {
     }
 
     @Test
-    fun `present - only has threads enabled if the feature flag is on`() = runTest {
+    fun `present - shows the thread list when threads are known`() = runTest {
         val itemsFlow = MutableStateFlow(listOf(aThreadListItem()))
         val room = FakeJoinedRoom(
             threadsListService = FakeThreadsListService(items = itemsFlow)
         )
-        val featureFlagService = FakeFeatureFlagService(
-            initialState = mapOf(FeatureFlags.Threads.key to false)
-        )
         val presenter = createMessagesPresenter(
             joinedRoom = room,
-            featureFlagService = featureFlagService
         )
         presenter.testWithLifecycleOwner {
-            val initialState = awaitItem()
-            // The feature flag is disabled, so even if the thread list has items, it will return it doesn't have any
-            assertThat(initialState.threads.hasThreads).isFalse()
+            var state = awaitItem()
+            while (!state.threads.hasThreads) state = awaitItem()
+            assertThat(state.threads.hasThreads).isTrue()
 
-            // Enable the feature flag, now it should reflect the thread list state
-            featureFlagService.setFeatureEnabled(FeatureFlags.RoomThreadList, true)
-            skipItems(1)
-            assertThat(awaitItem().threads.hasThreads).isTrue()
-
-            // And if we remove the items, it should update accordingly
             itemsFlow.value = emptyList()
-            assertThat(awaitItem().threads.hasThreads).isFalse()
+            state = awaitItem()
+            while (state.threads.hasThreads) state = awaitItem()
+            assertThat(state.threads.hasThreads).isFalse()
         }
     }
 

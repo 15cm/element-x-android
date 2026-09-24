@@ -22,12 +22,14 @@ import io.element.android.features.api.MigrationState
 import io.element.android.libraries.designsystem.preview.ElementPreview
 import io.element.android.libraries.designsystem.preview.PreviewsDayNight
 import io.element.android.libraries.designsystem.theme.components.CircularProgressIndicator
+import io.element.android.libraries.designsystem.theme.components.TextButton
 import io.element.android.libraries.designsystem.theme.components.Text
 import io.element.android.libraries.ui.strings.CommonStrings
 
 @Composable
 fun MigrationView(
     migrationState: MigrationState,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -41,6 +43,12 @@ fun MigrationView(
             CircularProgressIndicator()
             if (migrationState.migrationAction.isLoading()) {
                 Text(text = stringResource(id = CommonStrings.common_please_wait))
+            } else if (migrationState.migrationAction.isFailure()) {
+                Text(text = stringResource(id = CommonStrings.common_error))
+                TextButton(
+                    text = stringResource(id = CommonStrings.action_retry),
+                    onClick = onRetry,
+                )
             }
         }
     }
@@ -53,5 +61,6 @@ internal fun MigrationViewPreview(
 ) = ElementPreview {
     MigrationView(
         migrationState = state,
+        onRetry = {},
     )
 }

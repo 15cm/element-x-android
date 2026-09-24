@@ -28,6 +28,7 @@ class DefaultMigrationEntryPoint(
         modifier: Modifier,
     ) = MigrationView(
         migrationState = state,
+        onRetry = state.onRetry,
         modifier = modifier,
     )
 }

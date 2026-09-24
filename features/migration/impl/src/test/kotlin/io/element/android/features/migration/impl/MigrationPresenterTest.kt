@@ -31,7 +31,7 @@ class MigrationPresenterTest {
 
     @Test
     fun `present - run all migrations on fresh installation, and last version should be stored`() = runTest {
-        val migrations = (1..10).map { order ->
+        val migrations = (1..11).map { order ->
             FakeAppMigration(order = order)
         }
         val store = InMemoryMigrationStore(initialApplicationMigrationVersion = -1)
@@ -57,7 +57,7 @@ class MigrationPresenterTest {
 
     @Test
     fun `present - no migration should occurs if ApplicationMigrationVersion is the last one`() = runTest {
-        val migrations = (1..10).map {
+        val migrations = (1..11).map {
             FakeAppMigration(
                 order = it,
                 migrateLambda = lambdaRecorder<Boolean, Unit> { lambdaError() },
@@ -82,7 +82,7 @@ class MigrationPresenterTest {
     @Test
     fun `present - testing all migrations`() = runTest {
         val store = InMemoryMigrationStore(0)
-        val migrations = (1..10).map { FakeAppMigration(it) }
+        val migrations = (1..11).map { FakeAppMigration(it) }
         val presenter = createPresenter(
             migrationStore = store,
             migrations = migrations.toSet(),
@@ -100,6 +100,39 @@ class MigrationPresenterTest {
             for (migration in migrations) {
                 migration.migrateLambda.assertions().isCalledOnce().with(value(false))
             }
+        }
+    }
+
+    @Test
+    fun `present - failed migration can be retried without advancing version`() = runTest {
+        var attempts = 0
+        var allowSuccess = false
+        val migration = object : AppMigration {
+            override val order = 1
+            override suspend fun migrate(isFreshInstall: Boolean) {
+                attempts++
+                if (!allowSuccess) error("temporary failure")
+            }
+        }
+        val store = InMemoryMigrationStore(0)
+        val presenter = createPresenter(migrationStore = store, migrations = setOf(migration))
+        moleculeFlow(RecompositionMode.Immediate) { presenter.present() }.test {
+            awaitItem()
+            var failedState: io.element.android.features.api.MigrationState? = null
+            while (failedState == null) {
+                val state = awaitItem()
+                if (state.migrationAction is AsyncData.Failure) failedState = state
+            }
+            assertThat(attempts).isEqualTo(1)
+            assertThat(store.applicationMigrationVersion().first()).isEqualTo(0)
+            allowSuccess = true
+            failedState.onRetry()
+            var succeeded = false
+            while (!succeeded) {
+                succeeded = awaitItem().migrationAction is AsyncData.Success
+            }
+            assertThat(attempts).isEqualTo(2)
+            assertThat(store.applicationMigrationVersion().first()).isEqualTo(1)
         }
     }
 }

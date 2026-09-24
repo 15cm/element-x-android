@@ -12,6 +12,7 @@ import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
 import io.element.android.libraries.core.meta.BuildMeta
 import io.element.android.libraries.featureflag.api.Feature
+import io.element.android.libraries.featureflag.api.FeatureFlags
 import io.element.android.libraries.featureflag.api.FeaturesProvider
 import io.element.android.libraries.featureflag.test.FakeFeature
 import io.element.android.libraries.matrix.test.core.aBuildMeta
@@ -80,6 +81,22 @@ class DefaultFeatureFlagServiceTest {
             assertThat(awaitItem()).isTrue()
             featureFlagService.setFeatureEnabled(aFeature, false)
             assertThat(awaitItem()).isFalse()
+        }
+    }
+
+    @Test
+    fun `finished thread flags always use enabled defaults despite stored disabled values`() = runTest {
+        val buildMeta = aBuildMeta()
+        val provider = FakeMutableFeatureFlagProvider(0, buildMeta)
+        val service = createDefaultFeatureFlagService(providers = setOf(provider), buildMeta = buildMeta)
+        for (feature in listOf(FeatureFlags.Threads, FeatureFlags.RoomThreadList)) {
+            provider.setFeatureEnabled(feature, false)
+            service.isFeatureEnabledFlow(feature).test {
+                assertThat(awaitItem()).isTrue()
+                cancelAndIgnoreRemainingEvents()
+            }
+            assertThat(feature.isFinished).isTrue()
+            assertThat(feature.defaultValue(buildMeta)).isTrue()
         }
     }
 

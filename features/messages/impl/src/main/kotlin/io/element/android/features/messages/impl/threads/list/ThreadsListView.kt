@@ -9,6 +9,7 @@ package io.element.android.features.messages.impl.threads.list
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -37,10 +38,11 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import io.element.android.compound.theme.ElementTheme
 import io.element.android.compound.tokens.generated.CompoundIcons
-import io.element.android.libraries.designsystem.atomic.atoms.UnreadIndicatorAtom
+import io.element.android.features.messages.impl.R
 import io.element.android.libraries.designsystem.components.avatar.Avatar
 import io.element.android.libraries.designsystem.components.avatar.AvatarData
 import io.element.android.libraries.designsystem.components.avatar.AvatarSize
@@ -48,16 +50,16 @@ import io.element.android.libraries.designsystem.components.avatar.AvatarType
 import io.element.android.libraries.designsystem.components.button.BackButton
 import io.element.android.libraries.designsystem.preview.ElementPreview
 import io.element.android.libraries.designsystem.preview.PreviewsDayNight
-import io.element.android.libraries.designsystem.preview.ROOM_NAME
 import io.element.android.libraries.designsystem.preview.USER_NAME_ALICE
+import io.element.android.libraries.designsystem.theme.components.CircularProgressIndicator
 import io.element.android.libraries.designsystem.theme.components.HorizontalDivider
 import io.element.android.libraries.designsystem.theme.components.Icon
 import io.element.android.libraries.designsystem.theme.components.Scaffold
 import io.element.android.libraries.designsystem.theme.components.Text
+import io.element.android.libraries.designsystem.theme.components.TextButton
 import io.element.android.libraries.designsystem.theme.components.TopAppBar
 import io.element.android.libraries.designsystem.utils.lazyColumnContentPadding
 import io.element.android.libraries.designsystem.utils.scaffoldScrollableContentInsets
-import io.element.android.libraries.matrix.api.core.RoomId
 import io.element.android.libraries.matrix.api.core.ThreadId
 import io.element.android.libraries.matrix.api.core.UserId
 import io.element.android.libraries.matrix.api.core.asEventId
@@ -70,8 +72,6 @@ import io.element.android.libraries.matrix.api.timeline.item.event.TextMessageTy
 import io.element.android.libraries.matrix.api.timeline.item.event.getAvatarUrl
 import io.element.android.libraries.matrix.api.timeline.item.event.getDisambiguatedDisplayName
 import io.element.android.libraries.ui.strings.CommonStrings
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -138,25 +138,72 @@ fun ThreadsListView(
         }
     ) { padding ->
         val lazyListState = rememberLazyListState()
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = padding + lazyColumnContentPadding,
-            state = lazyListState,
-        ) {
-            itemsIndexed(state.threads, key = { _, row -> row.item.threadId }) { index, row ->
-                ThreadListItemRow(
-                    threadItem = row,
-                    onClick = onThreadClick,
+        if (state.isLoading && state.threads.isEmpty()) {
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (state.initialLoadFailed && state.threads.isEmpty()) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(text = stringResource(R.string.screen_threads_load_error))
+                TextButton(
+                    text = stringResource(CommonStrings.action_retry),
+                    onClick = { state.eventSink(ThreadsListEvent.RetryInitialLoad) },
                 )
+            }
+        } else if (!state.isLoading && state.threads.isEmpty()) {
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Text(text = stringResource(R.string.screen_threads_empty))
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = padding + lazyColumnContentPadding,
+                state = lazyListState,
+            ) {
+                itemsIndexed(state.threads, key = { _, row -> row.item.threadId }) { index, row ->
+                    ThreadListItemRow(
+                        threadItem = row,
+                        onClick = onThreadClick,
+                    )
 
-                if (index < state.threads.size - 1) {
-                    HorizontalDivider()
+                    if (index < state.threads.size - 1) {
+                        HorizontalDivider()
+                    }
+                }
+                if (state.initialLoadFailed) {
+                    item {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                            Text(text = stringResource(R.string.screen_threads_load_error))
+                            TextButton(
+                                text = stringResource(CommonStrings.action_retry),
+                                onClick = { state.eventSink(ThreadsListEvent.RetryInitialLoad) },
+                            )
+                        }
+                    }
+                } else if (state.isPaginating) {
+                    item { CircularProgressIndicator(Modifier.padding(16.dp)) }
+                } else if (state.paginationFailed) {
+                    item {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                            Text(text = stringResource(R.string.screen_threads_pagination_error))
+                            TextButton(
+                                text = stringResource(CommonStrings.action_retry),
+                                onClick = { state.eventSink(ThreadsListEvent.RetryPagination) },
+                            )
+                        }
+                    }
                 }
             }
         }
 
-        ScrollHelper(lazyListState) {
-            state.eventSink(ThreadsListEvent.Paginate)
+        if (!state.isLoading && !state.initialLoadFailed && state.threads.isNotEmpty()) {
+            ScrollHelper(lazyListState) {
+                state.eventSink(ThreadsListEvent.Paginate)
+            }
         }
     }
 }
@@ -213,9 +260,6 @@ private fun ThreadListItemRow(
 
         Column(modifier = Modifier.fillMaxWidth()) {
             // TODO actually compute these values based on the thread state (not available yet)
-            val hasMentions = false
-            val hasUnreadNotifications = false
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -233,7 +277,7 @@ private fun ThreadListItemRow(
                 Text(
                     text = threadItem.formattedTimestamp,
                     style = ElementTheme.typography.fontBodySmRegular,
-                    color = if (hasUnreadNotifications || hasMentions) ElementTheme.colors.textActionAccent else ElementTheme.colors.textSecondary,
+                    color = ElementTheme.colors.textSecondary,
                 )
             }
 
@@ -257,19 +301,6 @@ private fun ThreadListItemRow(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(7.dp)
                 ) {
-                    if (hasMentions) {
-                        Icon(
-                            modifier = Modifier.size(14.dp),
-                            imageVector = CompoundIcons.Mention(),
-                            contentDescription = null,
-                            tint = ElementTheme.colors.textActionAccent,
-                        )
-                    }
-
-                    UnreadIndicatorAtom(
-                        size = 14.dp,
-                        isVisible = hasUnreadNotifications,
-                    )
                 }
             }
 
@@ -324,18 +355,10 @@ private fun ThreadListItemRow(
 
 @PreviewsDayNight
 @Composable
-internal fun ThreadsListViewPreview() {
+internal fun ThreadsListViewPreview(@PreviewParameter(ThreadsListStatePreviewParam::class) state: ThreadsListState) {
     ElementPreview {
         ThreadsListView(
-            state = ThreadsListState(
-                roomId = RoomId("!room-id:server"),
-                roomName = ROOM_NAME,
-                roomAvatarUrl = null,
-                heroes = persistentListOf(),
-                threads = List(10) { aThreadListRowItem(threadId = ThreadId("\$thread-$it")) }.toImmutableList(),
-                isRoomTombstoned = false,
-                eventSink = {},
-            ),
+            state = state,
             onThreadClick = {},
             onBackClick = {},
         )

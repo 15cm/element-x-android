@@ -13,6 +13,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import dev.zacsweers.metro.AppScope
@@ -22,6 +23,7 @@ import io.element.android.features.api.MigrationState
 import io.element.android.features.migration.impl.migrations.AppMigration
 import io.element.android.libraries.architecture.AsyncData
 import io.element.android.libraries.architecture.Presenter
+import kotlinx.coroutines.CancellationException
 import timber.log.Timber
 
 @SingleIn(AppScope::class)
@@ -40,6 +42,8 @@ class MigrationPresenter(
             migrationStore.applicationMigrationVersion()
         }.collectAsState(initial = null)
         var migrationAction: AsyncData<Unit> by remember { mutableStateOf(AsyncData.Uninitialized) }
+        var retryCount by remember { mutableIntStateOf(0) }
+        var lastAttempt by remember { mutableStateOf<Pair<Int, Int>?>(null) }
 
         // Uncomment this block to run the migration everytime
 //        LaunchedEffect(Unit) {
@@ -47,7 +51,7 @@ class MigrationPresenter(
 //            migrationStore.setApplicationMigrationVersion(0)
 //        }
 
-        LaunchedEffect(migrationStoreVersion) {
+        LaunchedEffect(migrationStoreVersion, retryCount) {
             val migrationValue = migrationStoreVersion ?: return@LaunchedEffect
             if (migrationValue == -1) {
                 Timber.d("Fresh install, or previous installed application did not have the migration mechanism.")
@@ -58,17 +62,27 @@ class MigrationPresenter(
                 migrationAction = AsyncData.Success(Unit)
                 return@LaunchedEffect
             }
+            val attempt = migrationValue to retryCount
+            if (lastAttempt == attempt) return@LaunchedEffect
+            lastAttempt = attempt
             migrationAction = AsyncData.Loading(Unit)
             val nextMigration = orderedMigrations.firstOrNull { it.order > migrationValue }
             if (nextMigration != null) {
                 Timber.d("Current app migration version: $migrationValue. Applying migration: ${nextMigration.order}")
-                nextMigration.migrate(isFreshInstall)
-                migrationStore.setApplicationMigrationVersion(nextMigration.order)
+                try {
+                    nextMigration.migrate(isFreshInstall)
+                    migrationStore.setApplicationMigrationVersion(nextMigration.order)
+                } catch (exception: Exception) {
+                    if (exception is CancellationException) throw exception
+                    Timber.e(exception, "Failed to apply migration ${nextMigration.order}")
+                    migrationAction = AsyncData.Failure(exception)
+                }
             }
         }
 
         return MigrationState(
             migrationAction = migrationAction,
+            onRetry = { retryCount++ },
         )
     }
 }

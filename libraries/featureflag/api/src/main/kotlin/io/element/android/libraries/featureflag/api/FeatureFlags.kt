@@ -67,9 +67,8 @@ enum class FeatureFlags(
         key = "feature.thread_timeline",
         title = "Threads",
         description = "Renders thread messages as a dedicated timeline. Restarting the app is required for this setting to fully take effect.",
-        defaultValue = { false },
-        isFinished = false,
-        isInLabs = true,
+        defaultValue = { true },
+        isFinished = true,
     ),
     MultiAccount(
         key = "feature.multi_account",
@@ -120,8 +119,8 @@ enum class FeatureFlags(
         key = "feature.room_thread_list",
         title = "Add a list of threads in a room",
         description = "Add a new screen with a list of threads in a room.",
-        defaultValue = { false },
-        isFinished = false,
+        defaultValue = { true },
+        isFinished = true,
     ),
     AutomaticBackPagination(
         key = "feature.automatic_back_pagination",

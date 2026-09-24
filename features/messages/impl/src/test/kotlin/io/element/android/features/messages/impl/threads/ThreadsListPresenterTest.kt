@@ -22,33 +22,39 @@ import io.element.android.libraries.matrix.test.room.threads.FakeThreadsListServ
 import io.element.android.tests.testutils.lambda.lambdaRecorder
 import io.element.android.tests.testutils.test
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.Test
 
 class ThreadsListPresenterTest {
     @Test
     fun `present - initial state`() = runTest {
         createThreadsListPresenter().test {
-            awaitItem().run {
-                assertThat(threads).isEmpty()
-                assertThat(roomId).isEqualTo(A_ROOM_ID)
-                assertThat(roomName).isEqualTo(A_ROOM_NAME)
-                assertThat(roomAvatarUrl).isEqualTo(AN_AVATAR_URL)
-            }
+            var state = awaitItem()
+            assertThat(state.roomId).isEqualTo(A_ROOM_ID)
+            assertThat(state.roomName).isEqualTo(A_ROOM_NAME)
+            assertThat(state.roomAvatarUrl).isEqualTo(AN_AVATAR_URL)
+            while (state.isLoading) state = awaitItem()
+            assertThat(state.threads).isEmpty()
+            cancelAndIgnoreRemainingEvents()
         }
     }
 
     @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun `present - paginate`() = runTest {
         val paginateRecorder = lambdaRecorder<Result<Unit>> { Result.success(Unit) }
         val threadsListService = FakeThreadsListService(paginate = paginateRecorder)
         val room = FakeJoinedRoom(threadsListService = threadsListService)
         createThreadsListPresenter(room).test {
-            val initialItem = awaitItem()
+            var initialItem = awaitItem()
+            while (initialItem.isLoading) initialItem = awaitItem()
 
             // Pagination is automatically triggered on start, so we should have one call to paginate already
             paginateRecorder.assertions().isCalledOnce()
 
             initialItem.eventSink(ThreadsListEvent.Paginate)
+            runCurrent()
 
             // Simulate a pagination result
             threadsListService.emit(listOf(aThreadListItem()))
@@ -57,7 +63,60 @@ class ThreadsListPresenterTest {
             paginateRecorder.assertions().isCalledExactly(2)
 
             // And we receive the new items
-            assertThat(awaitItem().threads).isNotEmpty()
+            var updatedState = awaitItem()
+            while (updatedState.threads.isEmpty()) updatedState = awaitItem()
+            assertThat(updatedState.threads).isNotEmpty()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `present - initial load can be retried`() = runTest {
+        var shouldFail = true
+        var attempts = 0
+        val service = FakeThreadsListService(
+            paginate = {
+                attempts++
+                if (shouldFail) Result.failure(IllegalStateException()) else Result.success(Unit)
+            },
+        )
+        createThreadsListPresenter(FakeJoinedRoom(threadsListService = service)).test {
+            var state = awaitItem()
+            while (!state.initialLoadFailed) state = awaitItem()
+            assertThat(attempts).isEqualTo(1)
+            shouldFail = false
+            state.eventSink(ThreadsListEvent.RetryInitialLoad)
+            do {
+                state = awaitItem()
+            } while (state.isLoading || state.initialLoadFailed)
+            assertThat(attempts).isEqualTo(2)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `present - pagination failure can be retried`() = runTest {
+        var attempts = 0
+        val service = FakeThreadsListService(
+            paginate = {
+                attempts++
+                if (attempts == 2) Result.failure(IllegalStateException()) else Result.success(Unit)
+            },
+        )
+        createThreadsListPresenter(FakeJoinedRoom(threadsListService = service)).test {
+            var state = awaitItem()
+            while (state.isLoading) state = awaitItem()
+            service.emit(listOf(aThreadListItem()))
+            while (state.threads.isEmpty()) state = awaitItem()
+            state.eventSink(ThreadsListEvent.Paginate)
+            while (!state.paginationFailed) state = awaitItem()
+            assertThat(state.threads).isNotEmpty()
+            state.eventSink(ThreadsListEvent.RetryPagination)
+            do {
+                state = awaitItem()
+            } while (state.isPaginating || state.paginationFailed)
+            assertThat(attempts).isEqualTo(3)
+            cancelAndIgnoreRemainingEvents()
         }
     }
 

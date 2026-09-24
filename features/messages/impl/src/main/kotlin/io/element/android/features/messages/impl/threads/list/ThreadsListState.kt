@@ -18,5 +18,9 @@ data class ThreadsListState(
     val isRoomTombstoned: Boolean,
     val heroes: ImmutableList<AvatarData>,
     val threads: ImmutableList<ThreadListRowItem>,
+    val isLoading: Boolean,
+    val initialLoadFailed: Boolean,
+    val paginationFailed: Boolean,
+    val isPaginating: Boolean,
     val eventSink: (ThreadsListEvent) -> Unit,
 )

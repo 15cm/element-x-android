@@ -178,7 +178,6 @@ class MessagesPresenter(
                 .collectLatest { value = it.toImmutableList() }
         }
 
-        val canOpenThreadList by featureFlagService.isFeatureEnabledFlow(FeatureFlags.RoomThreadList).collectAsState(initial = false)
         val isCurrentlySharingLiveLocationInRoom by remember { liveLocationShareManager.isCurrentlySharing(room.roomId) }.collectAsState()
 
         val userEventPermissions by room.permissionsAsState(UserEventPermissions.DEFAULT) { perms ->
@@ -343,7 +342,7 @@ class MessagesPresenter(
             topBarSharedHistoryIcon = topBarSharedHistoryIcon,
             successorRoom = roomInfo.successorRoom,
             threads = Threads(
-                hasThreads = canOpenThreadList && threadsList.isNotEmpty(),
+                hasThreads = threadsList.isNotEmpty(),
                 // TODO calculate this properly based on the thread list and the read state of each thread
                 hasUnreadThreads = false,
             ),

@@ -1595,7 +1595,9 @@ private fun createActionListPresenter(
     isDeveloperModeEnabled: Boolean,
     room: BaseRoom = FakeBaseRoom(),
     timelineMode: Timeline.Mode = Timeline.Mode.Live,
-    featureFlagService: FakeFeatureFlagService = FakeFeatureFlagService(),
+    featureFlagService: FakeFeatureFlagService = FakeFeatureFlagService(
+        initialState = mapOf(FeatureFlags.Threads.key to false),
+    ),
     recentEmojis: GetRecentEmojis = GetRecentEmojis { Result.success(persistentListOf()) },
 ): ActionListPresenter {
     val preferencesStore = InMemoryAppPreferencesStore(isDeveloperModeEnabled = isDeveloperModeEnabled)
