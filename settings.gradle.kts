@@ -14,9 +14,25 @@ pluginManagement {
         mavenCentral()
     }
 }
+val githubPackagesUsername = providers.gradleProperty("githubPackagesUsername")
+    .orElse(providers.environmentVariable("GITHUB_PACKAGES_USERNAME"))
+val githubPackagesToken = providers.gradleProperty("githubPackagesToken")
+    .orElse(providers.environmentVariable("GITHUB_PACKAGES_TOKEN"))
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        maven {
+            name = "matrixRustSdkFork"
+            url = uri("https://maven.pkg.github.com/15cm/matrix-rust-sdk")
+            credentials {
+                username = githubPackagesUsername.orNull.orEmpty()
+                password = githubPackagesToken.orNull.orEmpty()
+            }
+            content {
+                includeModule("org.matrix.rustcomponents", "sdk-android")
+            }
+        }
         maven {
             url = uri("https://www.jitpack.io")
             content {

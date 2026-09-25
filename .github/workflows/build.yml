@@ -19,8 +19,13 @@ jobs:
     name: Build APKs
     runs-on: ubuntu-latest
     permissions:
+      contents: read
+      packages: read
       # For NejcZdovc/comment-pr
       pull-requests: write
+    env:
+      GITHUB_PACKAGES_USERNAME: ${{ github.actor }}
+      GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       matrix:
         variant: [debug, release, nightly]

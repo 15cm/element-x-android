@@ -88,6 +88,12 @@ jobs:
   konsist:
     name: Konsist tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      GITHUB_PACKAGES_USERNAME: ${{ github.actor }}
+      GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     # Allow all jobs on main and develop. Just one per PR.
     concurrency:
       group: ${{ github.ref == 'refs/heads/main' && format('check-konsist-main-{0}', github.sha) || github.ref == 'refs/heads/develop' && format('check-konsist-develop-{0}', github.sha) || format('check-konsist-{0}', github.ref) }}
@@ -129,6 +135,12 @@ jobs:
   compose:
     name: Compose tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      GITHUB_PACKAGES_USERNAME: ${{ github.actor }}
+      GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     # Allow all jobs on main and develop. Just one per PR.
     concurrency:
       group: ${{ github.ref == 'refs/heads/main' && format('check-compose-main-{0}', github.sha) || github.ref == 'refs/heads/develop' && format('check-compose-develop-{0}', github.sha) || format('check-compose-{0}', github.ref) }}
@@ -163,6 +175,12 @@ jobs:
   lint:
     name: Android lint check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      GITHUB_PACKAGES_USERNAME: ${{ github.actor }}
+      GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     # Allow all jobs on main and develop. Just one per PR.
     concurrency:
       group: ${{ github.ref == 'refs/heads/main' && format('check-lint-main-{0}', github.sha) || github.ref == 'refs/heads/develop' && format('check-lint-develop-{0}', github.sha) || format('check-lint-{0}', github.ref) }}
@@ -208,6 +226,12 @@ jobs:
   detekt:
     name: Detekt checks
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      GITHUB_PACKAGES_USERNAME: ${{ github.actor }}
+      GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     # Allow all jobs on main and develop. Just one per PR.
     concurrency:
       group: ${{ github.ref == 'refs/heads/main' && format('check-detekt-main-{0}', github.sha) || github.ref == 'refs/heads/develop' && format('check-detekt-develop-{0}', github.sha) || format('check-detekt-{0}', github.ref) }}
@@ -249,6 +273,12 @@ jobs:
   ktlint:
     name: Ktlint checks
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      GITHUB_PACKAGES_USERNAME: ${{ github.actor }}
+      GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     # Allow all jobs on main and develop. Just one per PR.
     concurrency:
       group: ${{ github.ref == 'refs/heads/main' && format('check-ktlint-main-{0}', github.sha) || github.ref == 'refs/heads/develop' && format('check-ktlint-develop-{0}', github.sha) || format('check-ktlint-{0}', github.ref) }}

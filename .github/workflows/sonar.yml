@@ -19,6 +19,12 @@ jobs:
   sonar:
     name: Sonar Quality Checks
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      GITHUB_PACKAGES_USERNAME: ${{ github.actor }}
+      GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     # Allow all jobs on main and develop. Just one per PR.
     concurrency:
       group: ${{ format('sonar-{0}', github.ref) }}

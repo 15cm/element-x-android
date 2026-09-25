@@ -18,6 +18,12 @@ jobs:
   build:
     name: Build Enterprise APKs
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      GITHUB_PACKAGES_USERNAME: ${{ github.actor }}
+      GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     # Skip in forks
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == 'element-hq/element-x-android' }}
     strategy:

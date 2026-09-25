@@ -17,6 +17,12 @@ jobs:
   nightlyReports:
     name: Create kover report artifact and upload sonar result.
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      GITHUB_PACKAGES_USERNAME: ${{ github.actor }}
+      GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     if: ${{ github.repository == 'element-hq/element-x-android' }}
     steps:
       - name: Free Disk Space (Ubuntu)
@@ -75,6 +81,12 @@ jobs:
   dependency-analysis:
     name: Dependency analysis
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      GITHUB_PACKAGES_USERNAME: ${{ github.actor }}
+      GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

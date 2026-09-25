@@ -109,6 +109,16 @@ This is the goal of https://github.com/matrix-org/matrix-rust-components-kotlin.
 This repository is used for distributing kotlin releases of the Matrix Rust SDK.
 It'll provide the corresponding aar and also publish them on maven.
 
+Element X consumes the custom SDK package from the
+[15cm/matrix-rust-sdk fork](https://github.com/15cm/matrix-rust-sdk):
+`org.matrix.rustcomponents:sdk-android:26.09.9-custom.1`. Configure GitHub Packages
+credentials before building. Locally, set `GITHUB_PACKAGES_USERNAME` and
+`GITHUB_PACKAGES_TOKEN`, or add `githubPackagesUsername` and `githubPackagesToken`
+to `~/.gradle/gradle.properties`. Use a GitHub token with `read:packages` access;
+never put credentials in this repository. CI uses its `GITHUB_TOKEN` with
+`packages: read`; the package must grant Actions access to the Element X Android
+repository in GitHub Packages settings.
+
 Most of the time **you want to use the releases made on maven with gradle**:
 
 ```groovy

@@ -16,6 +16,12 @@ jobs:
   gplay:
     name: Create App Bundle (Gplay)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      GITHUB_PACKAGES_USERNAME: ${{ github.actor }}
+      GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     concurrency:
       group: ${{ format('build-release-main-gplay-{0}', github.sha) }}
       cancel-in-progress: true
@@ -66,6 +72,12 @@ jobs:
   fdroid:
     name: Create APKs (FDroid)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      GITHUB_PACKAGES_USERNAME: ${{ github.actor }}
+      GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     concurrency:
       group: ${{ format('build-release-main-fdroid-{0}', github.sha) }}
       cancel-in-progress: true

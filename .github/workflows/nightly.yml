@@ -16,6 +16,12 @@ jobs:
   nightly:
     name: Build and publish nightly bundle to Firebase
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      GITHUB_PACKAGES_USERNAME: ${{ github.actor }}
+      GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     if: ${{ github.repository == 'element-hq/element-x-android' }}
     steps:
       - name: Free Disk Space (Ubuntu)
