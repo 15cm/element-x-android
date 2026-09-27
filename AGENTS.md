@@ -71,8 +71,10 @@ Common Gradle tasks:
 ### Local APK Signing Key
 
 - The locally generated APK signing key is stored outside the repository at `/home/sinkerine/.local/share/element-x-local-signing-0550e5GE/`.
-- `element-x-local.jks` is the private keystore; `password` stores its password. Both files have owner-only permissions, and the directory is owner-only.
-- Keep these files local and never stage, commit, or upload them. Back them up securely if future APKs must update installs signed with this key.
+- `element-x-local.jks` is the canonical key for locally distributed APKs; its alias is `element-x-local`. `password` stores the keystore password. Both files have owner-only permissions, and the directory is owner-only.
+- Gradle release builds currently use `app/signature/debug.keystore`. Treat those outputs as staging APKs only; re-sign primary and second APKs with `element-x-local.jks` before distribution. Set `ELEMENT_X_KEYSTORE_PATH`, `ELEMENT_X_KEYSTORE_PASSWORD`, and `ELEMENT_X_KEY_PASSWORD` from the local secure setup. Do not assume `tools/release/releaseV2.sh` is compatible: it currently hard-codes alias `elementx`.
+- Use the same signing certificate for both APKs and every later APK release. Before publishing, verify each APK with `apksigner` and confirm their signer SHA-256 digests match. Never rotate or regenerate the key for an installed package unless planning a user migration.
+- Keep the keystore and passwords local. Never stage, commit, print, or upload them. Back them up securely; losing the key prevents signing compatible updates.
 
 ### Gradle Modules
 
